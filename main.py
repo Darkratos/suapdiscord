@@ -1,6 +1,5 @@
 from genericpath import exists
 import discord
-from discord.ext import commands
 from requests import Session
 from bs4 import BeautifulSoup as bs
 import json
@@ -82,7 +81,7 @@ async def on_ready( ):
                 text += f"{ k }: { dict_materias[ m ][ k ] }\n"
 
             embed = discord.Embed( title = title, description = text, color = discord.Color.blue( ), url = 'https://suap.ifsuldeminas.edu.br/accounts/login' )
-            await channel.send( embed = embed )
+            await channel.send( "@here", embed = embed )
 
 with open( "creds.json", "r" ) as f:
     creds = json.load( f )   
