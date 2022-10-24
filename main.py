@@ -1,3 +1,4 @@
+from genericpath import exists
 import discord
 from discord.ext import commands
 from requests import Session
@@ -5,16 +6,11 @@ from bs4 import BeautifulSoup as bs
 import json
 import pickle
 
-DISCORD_TOKEN = "MTAzMTU3MjI0NDYyMDY0NDQzMg.GM70m2.lzXBZBi_iLwkVUM67jPLAQPShzaWGUmKYZ9hL8"
-
 def remove_unicode( str ):
     encoded_string = str.encode( 'ascii', 'ignore' )
     return encoded_string.decode( )
 
 client = discord.Client( intents= discord.Intents.default( ) )
-
-with open( "creds.json", "r" ) as f:
-    creds = json.load( f )
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:106.0) Gecko/20100101 Firefox/106.0',
@@ -63,19 +59,22 @@ async def on_ready( ):
             if ( tds[ 5 ].text != '-' ):
                 dict_materias[ materia ][ tds[ 2 ].text ] = f'{ tds[ 5 ].text } / { tds[ 4 ].text }'
 
+    if not exists( "notas.json" ):
+        with open( "notas.json", "wb" ) as f:
+            pickle.dump( dict_materias, f, protocol= pickle.HIGHEST_PROTOCOL )
+
     with open( "notas.json", "rb" ) as f:
         old_json = pickle.load( f )
 
     with open( "notas.json", "wb" ) as f:
         novo = { k: dict_materias[ k ] for k in dict_materias if k in old_json and dict_materias[ k ] != old_json[ k ] }
-        print( novo )
         pickle.dump( dict_materias, f, protocol= pickle.HIGHEST_PROTOCOL )
         
-    if novo:
+    if len( novo ):
         for server in client.guilds:
             channel = discord.utils.get( server.channels, name = "notas" )
 
-        for m in materias:
+        for m in novo:
             title = m
             text = ''
         
@@ -84,13 +83,8 @@ async def on_ready( ):
 
             embed = discord.Embed( title = title, description = text, color = discord.Color.blue( ), url = 'https://suap.ifsuldeminas.edu.br/accounts/login' )
             await channel.send( embed = embed )
-        
-        with open( 'notas.txt', 'w', encoding = 'utf8' ) as arq:
-            for linha in notas:
-                for nota in linha:
-                    arq.write( f'{nota};' )
-                arq.write( '\n' )
 
-    await client.close( )
-                
-client.run( DISCORD_TOKEN, log_handler = None )
+with open( "creds.json", "r" ) as f:
+    creds = json.load( f )   
+
+client.run( creds[ "token" ] )
