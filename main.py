@@ -1,15 +1,19 @@
+from doctest import DocTestParser
 from genericpath import exists
 import discord
+from discord import app_commands
 from requests import Session
 from bs4 import BeautifulSoup as bs
 import json
 import pickle
+from table2ascii import table2ascii as t2a, PresetStyle
 
 def remove_unicode( str ):
     encoded_string = str.encode( 'ascii', 'ignore' )
     return encoded_string.decode( )
 
-client = discord.Client( intents= discord.Intents.default( ) )
+client = discord.Client( intents = discord.Intents.default( ) )
+tree = app_commands.CommandTree( client )
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:106.0) Gecko/20100101 Firefox/106.0',
@@ -17,8 +21,48 @@ headers = {
     'Referer': 'https://suap.ifsuldeminas.edu.br/accounts/login/'
 }
 
+@tree.command( )
+async def full( interaction: discord.InteractionMessage ):
+    await interaction.response.defer( )
+    s = Session( )
+    r = s.get( 'https://suap.ifsuldeminas.edu.br/accounts/login/', headers = headers )
+    soup = bs( r.text, 'html.parser' )
+    token = soup.find( 'input', { 'type': 'hidden' } )[ 'value' ]
+
+    post_data = {
+        'csrfmiddlewaretoken': token,
+        'username': creds[ 'user' ],
+        'password': creds[ 'pass' ],
+        'this_is_the_login_form': '1',
+        'next': '/',
+        'g-recaptcha-response': ''
+    }
+
+    r = s.post( 'https://suap.ifsuldeminas.edu.br/accounts/login/', headers = headers, data = post_data )
+    r = s.get( f'https://suap.ifsuldeminas.edu.br/edu/aluno/{ creds[ "user" ] }/?tab=boletim', headers = headers )
+
+    soup = bs( r.text, 'html.parser' )
+
+    materias = soup.select( ".borda > tbody:nth-child(2)" )
+    materias = materias[ 0 ].find_all( 'tr' )
+
+    body = []
+
+    for m in materias:
+        splits = m.find_all( 'td' )
+        body.append( [ splits[ 1 ].text.split( ' - ' )[ 1 ], splits[ 8 ].text, splits[ 7 ].text ] )
+
+    output = t2a(
+        header = [ "Matéria", "Faltas", "Nota" ],
+        body = body,
+        style=PresetStyle.thin_box
+    )
+
+    await interaction.followup.send( content = f"```\n{ output }\n```" )
+
 @client.event
 async def on_ready( ):
+    await tree.sync( )
     s = Session( )
     r = s.get( 'https://suap.ifsuldeminas.edu.br/accounts/login/', headers = headers )
     soup = bs( r.text, 'html.parser' )
@@ -46,7 +90,6 @@ async def on_ready( ):
         r = s.get( f"https://suap.ifsuldeminas.edu.br{ m[ 'href' ] }?_popup=1", headers = headers )
         soup = bs( r.text, 'html.parser' )
         materia = soup.select( '.title-container > h2:nth-child(1)' )[ 0 ].text[ 7 : ]
-        materia = remove_unicode( materia )
         
         dict_materias[ materia ] = {}
 
