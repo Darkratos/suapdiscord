@@ -96,10 +96,10 @@ def main( should_close ):
         nota_tags = soup.select( 'html body.theme-luna.popup_ div.holder main#content div.box div table.borda tbody tr' )
         
         for tag in nota_tags:
-            descricao, _, valor, nota_obtida = [ tag.text for tag in tag.find_all( 'td' )[ 2 : 6 ] ]
+            sigla, _, descricao, _, valor, nota_obtida = [ tag.text for tag in tag.find_all( 'td' )[ 0 : 6 ] ]
 
             if ( nota_obtida != '-' ):
-                body.append( [ descricao, f'{ nota_obtida } / { valor }' ] )
+                body.append( [ descricao if descricao != '-' else sigla, f'{ nota_obtida } / { valor }' ] )
 
         output = t2a(
             header = [ "Atividade", "Nota" ],
@@ -126,10 +126,10 @@ def main( should_close ):
             nota_tags = soup.select( 'html body.theme-luna.popup_ div.holder main#content div.box div table.borda tbody tr' )
             
             for tag in nota_tags:
-                descricao, dummy, valor, nota_obtida = [ tag.text for tag in tag.find_all( 'td' )[ 2 : 6 ] ]
+                sigla, _, descricao, _, valor, nota_obtida = [ tag.text for tag in tag.find_all( 'td' )[ 0 : 6 ] ]
 
                 if ( nota_obtida != '-' ):
-                    dict_materias[ materia ][ descricao ] = f'{ nota_obtida } / { valor }'
+                    dict_materias[ materia ][ descricao if descricao != '-' else sigla ] = f'{ nota_obtida } / { valor }'
 
         old_json = { }
         
@@ -163,7 +163,7 @@ def main( should_close ):
                     text = "\n".join( [ f"{key}" for key in dict_materias[ materia ] ] )
 
                     embed = discord.Embed( title= title, description= text, color= discord.Color.blue( ), url= 'https://suap.ifsuldeminas.edu.br/accounts/login' )
-                    await channel.send( "<@Suap> ", embed= embed )
+                    await channel.send( "<@here> ", embed= embed )
 
         if should_close:
             sys.exit( )
