@@ -1,11 +1,12 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from requests import Session
 from bs4 import BeautifulSoup as bs
 import json
 import pickle
 from table2ascii import table2ascii as t2a, PresetStyle
 import sys
+import time
 
 class Suap( ):
     def __init__( self ) -> None:
@@ -50,7 +51,7 @@ def remove_unicode( str ):
         encoded_string = str.encode( 'ascii', 'ignore' )
         return encoded_string.decode( )  
 
-def main( should_close ):
+def main( ):
     suap = Suap( )
     bot = commands.Bot( command_prefix= "1", intents= discord.Intents.default( ) )
 
@@ -109,10 +110,8 @@ def main( should_close ):
 
         await interaction.response.send_message( content = f"```\n{ output }\n```" )
 
-    @bot.event
-    async def on_ready( ):
-        await bot.tree.sync( guild= discord.Object( id= 740695714316943442 ) )
-        
+    @tasks.loop( minutes = 10 )
+    async def check( ):
         soup = suap.login( )
         materia_popups_tags = soup.find_all( "a", { 'class': 'btn popup' } ) 
 
@@ -165,11 +164,13 @@ def main( should_close ):
                     embed = discord.Embed( title= title, description= text, color= discord.Color.blue( ), url= 'https://suap.ifsuldeminas.edu.br/accounts/login' )
                     await channel.send( "<@here> ", embed= embed )
 
-        if should_close:
-            sys.exit( )
+    @bot.event
+    async def on_ready( ):
+        await bot.tree.sync( guild= discord.Object( id= 740695714316943442 ) )
+
+        check.start( )
 
     bot.run( suap.creds[ "token" ] )
     
 if __name__ == "__main__":
-    should_close = True if len( sys.argv ) > 1 else False
-    main( should_close )
+    main( )
