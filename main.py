@@ -99,8 +99,8 @@ def main( ):
         for tag in nota_tags:
             sigla, _, descricao, _, valor, nota_obtida = [ tag.text for tag in tag.find_all( 'td' )[ 0 : 6 ] ]
 
-            if ( nota_obtida != '-' ):
-                body.append( [ descricao if descricao != '-' else sigla, f'{ nota_obtida } / { valor }' ] )
+            # if ( nota_obtida != '-' ):
+            body.append( [ ( descricao if len( descricao ) < 40 else ( descricao[ :40 ] + "..." )  ) if descricao != '-' else sigla, f'{ nota_obtida } / { valor }' ] )
 
         output = t2a(
             header = [ "Atividade", "Nota" ],
@@ -110,12 +110,15 @@ def main( ):
 
         await interaction.response.send_message( content = f"```\n{ output }\n```" )
 
-    @tasks.loop( minutes = 10 )
+    @tasks.loop( seconds = 1 )
     async def check( ):
         soup = suap.login( )
         materia_popups_tags = soup.find_all( "a", { 'class': 'btn popup' } ) 
 
         dict_materias = { }
+
+        materia_rows = soup.select( ".borda > tbody:nth-child(2)" )[ 0 ].find_all( 'tr' )
+
         for tag in materia_popups_tags:
             soup = suap.get_soup_instance( f"https://suap.ifsuldeminas.edu.br{ tag[ 'href' ] }?_popup=1", suap.headers )
             materia = remove_unicode( soup.select( '.title-container > h2:nth-child(1)' )[ 0 ].text[ 7 : ] )
@@ -129,6 +132,13 @@ def main( ):
 
                 if ( nota_obtida != '-' ):
                     dict_materias[ materia ][ descricao if descricao != '-' else sigla ] = f'{ nota_obtida } / { valor }'
+
+        for tag in materia_rows:
+            splits = tag.find_all( 'td' )
+            materia = remove_unicode( splits[ 1 ].text.split( ' - ' )[ 1 ].strip( ) )
+            faltas = splits[ 8 ].text
+
+            dict_materias[ materia ][ "faltas" ] = faltas
 
         old_json = { }
         
@@ -157,9 +167,9 @@ def main( ):
 
                 text = ''
                 for materia in novo:
-                    title = materia
+                    title = materia + " - Faltas: " + dict_materias[ materia ][ "faltas" ]
                     
-                    text = "\n".join( [ f"{key}" for key in dict_materias[ materia ] ] )
+                    text = "".join( [ ( f"{key}\n" if key != "faltas" else "" ) for key in dict_materias[ materia ] ] )
 
                     embed = discord.Embed( title= title, description= text, color= discord.Color.blue( ), url= 'https://suap.ifsuldeminas.edu.br/accounts/login' )
                     await channel.send( "<@here> ", embed= embed )
@@ -169,6 +179,7 @@ def main( ):
         await bot.tree.sync( guild= discord.Object( id= 740695714316943442 ) )
 
         check.start( )
+        check.change_interval( minutes = 10 )
 
     bot.run( suap.creds[ "token" ] )
     
