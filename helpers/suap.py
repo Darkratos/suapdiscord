@@ -8,8 +8,18 @@ class Subject( ):
     def __init__( self, name: str = None ) -> None:
         self.name: str = name
         self.total_grade: float = 0
-        self.grades: list[tuple[str, str]] = [ ]
+        self.grades: dict[str, str] = { }
         self.absence: int = 0
+        
+    def __str__( self ):
+        text = "" 
+        
+        for grade in self.grades:
+            text += f"{grade[ 0 ]}: {grade[ 1 ]}\n"
+            
+        text += str( self.absence )
+        
+        return text
 
 class Suap( ):
     def __init__( self ) -> None:
@@ -63,7 +73,7 @@ class Suap( ):
         return period_selector.find_next( "option" ).get_text( ).replace( "/", "-" )
         
     def get_subjects( self ) -> list[Subject]:
-        if self.soup.find( "p", { "class" : "msg alert" } ).get_text( ):
+        if self.soup.find( "p", { "class" : "msg alert" } ):
             return []
         
         subject_rows_tag: list[bs] = self.soup.find( "table" ).find( "tbody" ).find_all( 'tr' )
@@ -75,8 +85,8 @@ class Suap( ):
             
             subject = Subject( )
             subject.name = column_tag[ 1 ].get_text( ).split( "-" )[1]
-            subject.absence = int( column_tag[4].get_text( ) )
-            subject.total_grade = float( column_tag[11].get_text( ) )
+            subject.absence = int( column_tag[4].get_text( ) ) if not "-" in column_tag[4].get_text( ) else 0
+            subject.total_grade = float( column_tag[11].get_text( ) ) if not "-" in column_tag[11].get_text( ) else 0
             
             popup_tag = column_tag[ 12 ].find_next( "a" )
             soup = self.get_soup_instance( f"https://suap.ifsuldeminas.edu.br{ popup_tag[ 'href' ] }?_popup=1", self.headers )
@@ -86,7 +96,7 @@ class Suap( ):
                 column_tags: list[bs] = tag.find_all( 'td' )[ 0 : 6 ]
                 sigla, _, descricao, _, valor, nota_obtida = [ tag.get_text() for tag in column_tags ]
 
-                subject.grades.append( ( ( descricao if descricao != '-' else sigla ), f'{ nota_obtida } / { valor }' ))
+                subject.grades[ ( descricao if descricao != '-' else sigla ) ] = f'{ nota_obtida } / { valor }'
                 
             subjects_list.append( subject )
         
@@ -100,12 +110,8 @@ class Suap( ):
                 return subjects
             
         except FileNotFoundError:
-            print( f"[!] Criando {self.current_period}.json" )
-            empty_list = []
-            with open( f"{self.current_period}.json", "wb" ) as file:
-                pickle.dump( empty_list, file, protocol= pickle.HIGHEST_PROTOCOL )
-                
-            return empty_list
+            print( f"[!] Não existe {self.current_period}.json" )
+            return None
                 
         except IOError:
             print( f"[!] Erro em abrir {self.current_period}.json" )

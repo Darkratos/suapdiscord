@@ -45,68 +45,85 @@ def main( ):
             style= PresetStyle.thin_box
         )
 
-        await interaction.response.send_message( content = f"```\n{ output }\n```" )
+        await interaction.response.send_message( content = f"```\n{ output }\n```", ephemeral= True )
 
     @tasks.loop( minutes = 10 )
     async def check( ):
-        updated_subjects = suap.get_subjects( )
+        new_subjects = suap.get_subjects( )
         old_subjects = suap.get_json_subjects( )
         subjects_with_new_grades: list[Subject] = [ ]
         subjects_with_new_absence: list[Subject] = [ ]
         
-        for old_subject, updated_subject in zip( old_subjects, updated_subjects ):
-            old_subject: Subject
-            updated_subject: Subject
-            
-            new_grades = [ updated_grade for old_grade, updated_grade in zip(old_subject.grades, updated_subject.grades) if updated_grade[1] != old_grade[1] ]            
-            
-            if len( new_grades ):
-                subjects_with_new_grades.append( updated_subject )
+        if old_subjects:
+            for old_subject, new_subject in zip( old_subjects, new_subjects ):
+                old_subject: Subject
+                new_subject: Subject
                 
-            if old_subject.absence != updated_subject.absence:
-                subjects_with_new_absence.append( updated_subject )
+                old_grade_values = old_subject.grades.values( )
+                new_grade_values = new_subject.grades.values( )
+                
+                print(old_subject, new_subject)
+                
+                new_grades = [ new_grade for old_grade, new_grade in zip( old_grade_values, new_grade_values ) if new_grade != old_grade ]
+                                
+                if len( new_grades ):
+                    subjects_with_new_grades.append( new_subject )
+                    
+                if old_subject.absence != new_subject.absence:
+                    subjects_with_new_absence.append( new_subject )
         
+        else:
+            subjects_with_new_grades = new_subjects
+            subjects_with_new_absence = new_subjects
+            
         if len( subjects_with_new_grades ):
             print( "[!] Novas notas" )
-            suap.write_json_subjects( updated_subjects )
-            
+            suap.write_json_subjects( new_subjects )
+                        
             for server in bot.guilds:
-                channel = discord.utils.get( server.channels, name= channels_names[ "grades" ] )
-                
-                body = [ ]
+                channel = discord.utils.get( server.channels, name= channels_names["grades"] )
+                output = ""
                 
                 for subject in subjects_with_new_grades:
-                    for name, grade in subject.grades:
+                    body = [ ]
+                    
+                    for name, grade in subject.grades.items( ):
                         body.append( [ name, grade ] )
+                        
+                    table = t2a(
+                        header = [ "Atividade", "Nota" ],
+                        body = body,
+                        style= PresetStyle.thin_box
+                    )
                 
-                output = t2a(
-                    header = [ "Atividade", "Nota" ],
-                    body = body,
-                    style= PresetStyle.thin_box
-                )
+                    output += f"**{subject.name}**\n```{table}```\n\n"
+                
+                embed = discord.Embed( title= "Novas notas", description= output, url= f"https://suap.ifsuldeminas.edu.br/edu/aluno/{suap.creds['user']}/?tab=boletim" )
 
-                await channel.send( "<@Suap> ", embed= output )
+                await channel.send( "", embed= embed )
 
         if len( subjects_with_new_absence ):
             print("[!] Novas faltas")
-            suap.write_json_subjects( updated_subjects )
+            suap.write_json_subjects( new_subjects )
             
             for server in bot.guilds:
-                channel = discord.utils.get( server.channels, name= channels_names[ "absences" ] )
+                channel = discord.utils.get( server.channels, name= channels_names["absences"] )
                 
                 output = t2a(
                     header = [ "Matéria", "Faltas" ],
                     body = [ [ subject.name, subject.absence ] for subject in subjects_with_new_grades ],
                     style= PresetStyle.thin_box
                 )
+                
+                embed = discord.Embed( title= "Novas faltas", description= f"```\n{ output }\n```", url= f"https://suap.ifsuldeminas.edu.br/edu/aluno/{suap.creds['user']}/?tab=boletim" )
 
-                await channel.send( "<@here> ", embed= output )
+                await channel.send( "", embed= embed )
 
     @bot.event
     async def on_ready( ):
-        await bot.tree.sync( guild=discord.Object( id= server_id) )
+        await bot.tree.sync( guild= discord.Object( id= server_id) )
 
-        check.start( )
+        check.start( ) 
 
     bot.run( token )
     
