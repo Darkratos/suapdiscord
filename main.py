@@ -31,8 +31,6 @@ def main( ):
     @bot.tree.command( name= "detalhes", description= "Detalha uma matéria" ) 
     @app_commands.choices( choices= [ discord.app_commands.Choice( name= subject.name, value= subject.name ) for subject in suap.get_subjects( ) ] )
     async def detalhes( interaction: discord.Interaction, choices: app_commands.Choice[str] ):
-        print(choices.name)
-
         subject = suap.get_subject( choices.name )
         body = []
         
@@ -61,8 +59,6 @@ def main( ):
                 
                 old_grade_values = old_subject.grades.values( )
                 new_grade_values = new_subject.grades.values( )
-                
-                print(old_subject, new_subject)
                 
                 new_grades = [ new_grade for old_grade, new_grade in zip( old_grade_values, new_grade_values ) if new_grade != old_grade ]
                                 
