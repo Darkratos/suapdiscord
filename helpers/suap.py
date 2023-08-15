@@ -2,7 +2,7 @@ import json
 import pickle
 from bs4 import BeautifulSoup as bs
 from requests import Session
-
+import os
 
 class Subject( ):
     def __init__( self, name: str = None ) -> None:
@@ -103,6 +103,9 @@ class Suap( ):
         return subjects_list
             
     def get_json_subjects( self ) -> dict:
+        if not os.path.exists( 'periods' ):
+            os.mkdir( 'periods' )
+            
         try:
             with open( f"periods/{self.current_period}.json", "rb" ) as file:
                 subjects = pickle.load(file)
