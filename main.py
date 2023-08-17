@@ -15,6 +15,8 @@ def main( ):
 
     @bot.tree.command( name="full", description= "Mostra todas notas e faltas" ) 
     async def full( interaction: discord.Interaction ):
+        await interaction.response.defer( ephemeral= True )
+
         body = []
         
         for subject in suap.get_subjects( ):
@@ -26,11 +28,13 @@ def main( ):
             style= PresetStyle.thin_box
         )
 
-        await interaction.response.send_message( content = f"```\n{ output }\n```" )
+        await interaction.followup.send( content = f"```\n{ output }\n```", ephemeral= True )
 
     @bot.tree.command( name= "detalhes", description= "Detalha uma matéria" ) 
     @app_commands.choices( choices= [ discord.app_commands.Choice( name= subject.name, value= subject.name ) for subject in suap.get_subjects( ) ] )
     async def detalhes( interaction: discord.Interaction, choices: app_commands.Choice[str] ):
+        await interaction.response.defer( )
+
         subject = suap.get_subject( choices.name )
         body = []
         
@@ -43,7 +47,7 @@ def main( ):
             style= PresetStyle.thin_box
         )
 
-        await interaction.response.send_message( content = f"```\n{ output }\n```", ephemeral= True )
+        await interaction.followup.send( content = f"```\n{ output }\n```", ephemeral= True )
 
     @tasks.loop( seconds = 1 )
     async def check( ):
