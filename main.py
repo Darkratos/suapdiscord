@@ -38,7 +38,7 @@ def main( ):
         subject = suap.get_subject( choices.name )
         body = []
         
-        for name, grade in subject.grades:
+        for name, grade in subject.grades.items( ):
             body.append( [ name, grade ] )
         
         output = t2a(
