@@ -32,8 +32,8 @@ def main( ):
 
     @bot.tree.command( name= "detalhes", description= "Detalha uma matéria" ) 
     @app_commands.choices( choices= [ discord.app_commands.Choice( name= subject.name, value= subject.name ) for subject in suap.get_subjects( ) ] )
-    async def detalhes( interaction: discord.Interaction, choices: app_commands.Choice[str] ):
-        await interaction.response.defer( )
+    async def detalhes( interaction: discord.Interaction, choices: app_commands.Choice[str] ): 
+        await interaction.response.defer( ephemeral= True  )
 
         subject = suap.get_subject( choices.name )
         body = []
@@ -47,9 +47,9 @@ def main( ):
             style= PresetStyle.thin_box
         )
 
-        await interaction.followup.send( content = f"```\n{ output }\n```", ephemeral= True )
+        await interaction.followup.send( content = f"**{ choices.name }**\n```\n{ output }\n```", ephemeral= True )
 
-    @tasks.loop( seconds = 1 )
+    @tasks.loop( seconds= 1 )
     async def check( ):
         new_subjects = suap.get_subjects( )
         old_subjects = suap.get_json_subjects( )
@@ -111,7 +111,7 @@ def main( ):
                 
                 output = t2a(
                     header = [ "Matéria", "Faltas" ],
-                    body = [ [ subject.name, subject.absence ] for subject in subjects_with_new_grades ],
+                    body = [ [ subject.name, subject.absence ] for subject in subjects_with_new_absence ],
                     style= PresetStyle.thin_box
                 )
                 
@@ -119,10 +119,11 @@ def main( ):
 
                 await channel.send( "", embed= embed )
 
+        check.change_interval( seconds= 0, minutes= 10 )
+
     @bot.event
     async def on_ready( ):
-        await bot.tree.sync( guild= discord.Object( id= server_id ) )
-
+        await bot.tree.sync( )
         check.start( ) 
 
     bot.run( token )
