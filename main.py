@@ -20,7 +20,7 @@ def main( ):
         body = []
         
         for subject in suap.get_subjects( ):
-            body.append( [subject.name, subject.absence, subject.total_grade] )
+            body.append( [ subject.name, subject.absence, subject.total_grade ] )
             
         output = t2a(
             header = [ "Matéria", "Faltas", "Nota" ],
@@ -39,7 +39,7 @@ def main( ):
         body = []
         
         for name, grade in subject.grades.items( ):
-            body.append( [ name, grade ] )
+            body.append( [ name if len( name ) < 40 else f"{ name[ :40 ] }...", grade ] )
         
         output = t2a(
             header = [ "Atividade", "Nota" ],
@@ -81,14 +81,14 @@ def main( ):
             suap.write_json_subjects( new_subjects )
                         
             for server in bot.guilds:
-                channel = discord.utils.get( server.channels, name= channels_names["grades"] )
+                channel = discord.utils.get( server.channels, name= channels_names[ "grades" ] )
                 output = ""
                 
                 for subject in subjects_with_new_grades:
                     body = [ ]
                     
                     for name, grade in subject.grades.items( ):
-                        body.append( [ name, grade ] )
+                        body.append( [ name if len( name ) < 40 else f"{ name[ :40 ] }...", grade ] )
                         
                     table = t2a(
                         header = [ "Atividade", "Nota" ],
@@ -119,6 +119,7 @@ def main( ):
 
                 await channel.send( "", embed= embed )
 
+        print( "[+] Check feita" )
         check.change_interval( seconds= 0, minutes= 10 )
 
     @bot.event
